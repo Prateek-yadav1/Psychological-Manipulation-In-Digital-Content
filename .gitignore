@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-server/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cursor / AI
+.cursor/
+
+# Datasets and Models
+3952415/
+3952415.zip
+models/
+mindguard_models/
+prepared_manipulation_dataset/
+datasets/
+data/
+files/
+files (3)/
+jarvis-ai-main/
+*.pdf
+*.zip
+*.ipynb
+devall.err
+devall.log
+
+# Python / ML artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+*.pkl
+*.pt
+*.safetensors
+*.onnx
+*.bin
+*.h5
+
+# Vite cache
+node_modules/.vite/
