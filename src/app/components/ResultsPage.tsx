@@ -13,11 +13,11 @@ import { toast } from 'sonner';
 import { useAppContext } from '../../context/AppContext';
 
 const TACTIC_COLORS: Record<string, string> = {
-  Emotional:  '#FF3B5C',
-  Urgency:    '#FFB347',
-  Authority:  '#7C3AED',
-  Bandwagon:  '#3B82F6',
-  Other:      '#00E5CC',
+  Emotional:  '#b94b42',
+  Urgency:    '#a76b20',
+  Authority:  '#647566',
+  Bandwagon:  '#66788a',
+  Other:      '#286653',
 };
 
 export function ResultsPage() {
@@ -94,14 +94,14 @@ export function ResultsPage() {
       value: manipulationScore,
       color:
         displayRiskLevel === 'critical'
-          ? '#FF3B5C'
+            ? '#b94b42'
           : displayRiskLevel === 'high'
-            ? (isEmailMode ? '#FFB347' : '#FF3B5C')
+              ? (isEmailMode ? '#a76b20' : '#b94b42')
             : displayRiskLevel === 'medium'
-              ? (isEmailMode ? '#FACC15' : '#FFB347')
-              : '#00E5CC',
+                ? (isEmailMode ? '#a76b20' : '#a76b20')
+                : '#286653',
     },
-    { value: 100 - manipulationScore, color: '#1A2640' },
+    { value: 100 - manipulationScore, color: '#e7e5dd' },
   ];
 
   const riskLabel =
@@ -119,31 +119,31 @@ export function ResultsPage() {
   const emailBadge = isEmailMode && emailLabel
     ? ({
         legitimate: {
-          label: '✓ Legitimate Email',
+          label: 'Legitimate',
           className: 'bg-primary/20 text-primary border-primary/40',
         },
         mild_influence: {
-          label: '💡 Mild Influence',
+          label: 'Mild influence',
           className: 'bg-blue-500/20 text-blue-300 border-blue-400/40',
         },
         fear_induction: {
-          label: '⚠️ Fear Induction',
+          label: 'Fear induction',
           className: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40',
         },
         urgency_manipulation: {
-          label: '⏰ Urgency Manipulation',
+          label: 'Urgency manipulation',
           className: 'bg-warning/20 text-warning border-warning/40',
         },
         authority_exploitation: {
-          label: '🎭 Authority Exploitation',
+          label: 'Authority exploitation',
           className: 'bg-orange-500/20 text-orange-300 border-orange-400/40',
         },
         financial_manipulation: {
-          label: '💰 Financial Manipulation',
+          label: 'Financial manipulation',
           className: 'bg-destructive/20 text-destructive border-destructive/40',
         },
         identity_deception: {
-          label: '☠️ Identity Deception',
+          label: 'Identity deception',
           className: 'bg-purple-500/20 text-purple-300 border-purple-400/40',
         },
       } as const)[emailLabel]
@@ -260,8 +260,11 @@ export function ResultsPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-3xl sm:text-4xl neon-text">Analysis Report</h1>
-            <p className="text-muted-foreground mt-1">Comprehensive manipulation detection results</p>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Content review</p>
+            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">Analysis notes</h1>
+            <p className="text-muted-foreground mt-1">
+              {isEmailMode ? 'Email assessment' : 'Article assessment'} · A closer look at the language and signals
+            </p>
             {emailBadge && (
               <div className="mt-3">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border font-mono ${emailBadge.className}`}>
@@ -290,15 +293,8 @@ export function ResultsPage() {
       </div>
 
       {isEmailMode && (
-        <div className="glass-card rounded-xl p-6 mb-8 border-primary/30">
-          <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">Email Cognitive Analysis</h2>
-          {emailBadge && (
-            <div className="mb-4">
-              <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm border font-mono ${emailBadge.className}`}>
-                {emailBadge.label}
-              </span>
-            </div>
-          )}
+        <div className="glass-card rounded-xl p-6 mb-8">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-4">Email assessment</h2>
           {emailManipulationDescription && (
             <div className="mb-4 p-4 rounded-lg bg-secondary/30 border border-border">
               <p className="text-sm text-foreground">{emailManipulationDescription}</p>
@@ -325,40 +321,40 @@ export function ResultsPage() {
       )}
 
       {/* Top Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="glass-card rounded-xl p-5 border-destructive/30">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider mb-3">
+      <div className="glass-card mb-8 grid grid-cols-2 divide-x divide-y divide-border rounded-xl px-2 sm:grid-cols-4 sm:divide-y-0 sm:px-4">
+        <div className="px-4 py-5 sm:px-5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <Activity className="w-3 h-3" />
             Manipulation Score
           </div>
-          <div className={`text-4xl font-mono neon-text text-${riskColor} mb-1`} style={emailMediumRiskTextStyle}>{manipulationScore}</div>
+          <div className={`text-4xl font-semibold tracking-tight text-${riskColor} mb-1`} style={emailMediumRiskTextStyle}>{manipulationScore}</div>
           <div className="text-xs text-muted-foreground" style={emailMediumRiskTextStyle}>{riskLabel}</div>
         </div>
 
-        <div className="glass-card rounded-xl p-5 border-primary/30">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="px-4 py-5 sm:px-5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <Shield className="w-3 h-3" />
             Trust Score
           </div>
-          <div className={`text-4xl font-mono mb-1 ${trustScore < 40 ? 'text-destructive' : trustScore < 60 ? 'text-warning' : 'text-primary'}`}>{trustScore}</div>
+          <div className={`text-4xl font-semibold tracking-tight mb-1 ${trustScore < 40 ? 'text-destructive' : trustScore < 60 ? 'text-warning' : 'text-primary'}`}>{trustScore}</div>
           <div className="text-xs text-muted-foreground">{trustScore < 40 ? 'Below threshold' : trustScore < 60 ? 'Moderate' : 'Trustworthy'}</div>
         </div>
 
-        <div className="glass-card rounded-xl p-5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="px-4 py-5 sm:px-5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <Target className="w-3 h-3" />
             Confidence
           </div>
-          <div className="text-4xl font-mono text-primary neon-text mb-1">{confidence}%</div>
-          <div className="text-xs text-muted-foreground">Analysis accuracy</div>
+          <div className="text-4xl font-semibold tracking-tight text-primary mb-1">{confidence}%</div>
+          <div className="text-xs text-muted-foreground">Model confidence</div>
         </div>
 
-        <div className="glass-card rounded-xl p-5 border-warning/30">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="px-4 py-5 sm:px-5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <TrendingUp className="w-3 h-3" />
             Bias Level
           </div>
-          <div className={`text-4xl font-mono mb-1 ${biasLevel > 60 ? 'text-destructive' : biasLevel > 35 ? 'text-warning' : 'text-primary'}`}>{biasLevel}%</div>
+          <div className={`text-4xl font-semibold tracking-tight mb-1 ${biasLevel > 60 ? 'text-destructive' : biasLevel > 35 ? 'text-warning' : 'text-primary'}`}>{biasLevel}%</div>
           <div className="text-xs text-muted-foreground">{biasLevel > 60 ? 'Significant bias' : biasLevel > 35 ? 'Moderate bias' : 'Low bias'}</div>
         </div>
       </div>
@@ -450,8 +446,8 @@ export function ResultsPage() {
                           startAngle={90} endAngle={-270}
                           dataKey="value"
                         >
-                          <Cell fill={trustScore < 40 ? '#FF3B5C' : trustScore < 60 ? '#FFB347' : '#00E5CC'} stroke="none" />
-                          <Cell fill="#1A2640" stroke="none" />
+                          <Cell fill={trustScore < 40 ? '#b94b42' : trustScore < 60 ? '#a76b20' : '#286653'} stroke="none" />
+                          <Cell fill="#e7e5dd" stroke="none" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
@@ -552,8 +548,8 @@ export function ResultsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={[{ value: biasLevel }, { value: 100 - biasLevel }]} cx="50%" cy="50%" innerRadius={30} outerRadius={45} startAngle={90} endAngle={-270} dataKey="value">
-                        <Cell fill={biasLevel > 60 ? '#FF3B5C' : '#FFB347'} stroke="none" />
-                        <Cell fill="#1A2640" stroke="none" />
+                        <Cell fill={biasLevel > 60 ? '#b94b42' : '#a76b20'} stroke="none" />
+                        <Cell fill="#e7e5dd" stroke="none" />
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
@@ -573,8 +569,8 @@ export function ResultsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={[{ value: emotionalIntensity }, { value: 100 - emotionalIntensity }]} cx="50%" cy="50%" innerRadius={30} outerRadius={45} startAngle={90} endAngle={-270} dataKey="value">
-                        <Cell fill="#FF3B5C" stroke="none" />
-                        <Cell fill="#1A2640" stroke="none" />
+                        <Cell fill="#b94b42" stroke="none" />
+                        <Cell fill="#e7e5dd" stroke="none" />
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
@@ -784,7 +780,7 @@ export function ResultsPage() {
                   labelLine={false}
                 >
                   {tactics.map((entry, i) => (
-                    <Cell key={i} fill={TACTIC_COLORS[entry.name] ?? '#00E5CC'} />
+                    <Cell key={i} fill={TACTIC_COLORS[entry.name] ?? '#286653'} />
                   ))}
                 </Pie>
               </PieChart>
@@ -793,7 +789,7 @@ export function ResultsPage() {
               {tactics.map((t, i) => (
                 <div key={i} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TACTIC_COLORS[t.name] ?? '#00E5CC' }} />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TACTIC_COLORS[t.name] ?? '#286653' }} />
                     <span>{t.name}</span>
                   </div>
                   <span className="font-mono text-muted-foreground">{t.value}%</span>
@@ -807,9 +803,9 @@ export function ResultsPage() {
             <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">Manipulation Profile</h3>
             <ResponsiveContainer width="100%" height={250}>
               <RadarChart data={radarData}>
-                <PolarGrid stroke="#1A2640" />
+                <PolarGrid stroke="#e5e3db" />
                 <PolarAngleAxis dataKey="metric" tick={{ fill: '#6B7A99', fontSize: 11 }} />
-                <Radar dataKey="value" stroke="#00E5CC" fill="#00E5CC" fillOpacity={0.4} />
+                <Radar dataKey="value" stroke="#286653" fill="#286653" fillOpacity={0.2} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -822,7 +818,7 @@ export function ResultsPage() {
                 <XAxis type="number" domain={[0, 100]} stroke="#6B7A99" fontSize={10} />
                 <YAxis type="category" dataKey="tactic" stroke="#6B7A99" fontSize={10} width={60} />
                 <Tooltip contentStyle={{ background: 'rgba(13,21,37,0.95)', border: '1px solid rgba(0,229,204,0.2)', borderRadius: '8px', fontSize: '12px' }} />
-                <Bar dataKey="score" fill="#00E5CC" radius={[0, 8, 8, 0]} />
+                <Bar dataKey="score" fill="#286653" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

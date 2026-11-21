@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { Cpu, Activity, GitCompare, History, Menu, X, Trash2 } from 'lucide-react';
+import { Cpu, ShieldCheck, Activity, GitCompare, History, Menu, X, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAppContext } from '../../context/AppContext';
@@ -39,21 +39,20 @@ export function Layout() {
   return (
     <div className="min-h-screen relative">
       {/* Navbar */}
-      <nav className="glass-card border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 py-4">
+      <nav className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
+        <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
             <Link
               to="/"
-              className="group flex items-center gap-3 rounded-xl border border-primary/25 bg-[linear-gradient(145deg,rgba(78,120,255,0.1),rgba(12,20,36,0.88))] px-3 py-2 shadow-[0_0_16px_rgba(78,120,255,0.12)] transition-all hover:border-primary/45 hover:shadow-[0_0_24px_rgba(78,120,255,0.2)]"
+              className="group flex items-center gap-3"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-primary/35 bg-[radial-gradient(circle_at_30%_20%,rgba(111,212,255,0.2),rgba(78,120,255,0.1)_45%,rgba(10,18,30,0.95)_90%)]">
-                <Cpu className="h-6 w-6 text-primary neon-glow" />
-                <div className="absolute inset-0 rounded-lg bg-primary/14 opacity-0 blur-xl transition-opacity group-hover:opacity-100" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-primary">
+                <ShieldCheck className="h-5 w-5" />
               </div>
               <div className="leading-tight">
-                <h1 className="text-[1.55rem] sm:text-[1.75rem] neon-text">ManipuLens AI</h1>
-                <p className="text-xs tracking-[0.04em] text-muted-foreground">Manipulation Detection & Analysis</p>
+                <h1 className="font-body text-lg font-semibold tracking-tight text-foreground">ManipuLens</h1>
+                <p className="text-xs text-muted-foreground">Content credibility review</p>
               </div>
             </Link>
 
@@ -66,10 +65,10 @@ export function Layout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                       isActive
-                        ? 'bg-primary/20 text-primary neon-glow border border-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -79,10 +78,10 @@ export function Layout() {
               })}
               <button
                 onClick={() => setHistoryOpen(!historyOpen)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ml-2 ${
+                className={`ml-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                   historyOpen
-                    ? 'bg-primary/20 text-primary border border-primary/40'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 }`}
               >
                 <History className="w-4 h-4" />
@@ -120,10 +119,10 @@ export function Layout() {
                     key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm w-full ${
+                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm transition-colors ${
                       isActive
-                        ? 'bg-primary/20 text-primary neon-glow border border-primary/40'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -161,7 +160,7 @@ export function Layout() {
             className="fixed inset-0 z-40 bg-background/50 backdrop-blur-sm"
             onClick={() => setHistoryOpen(false)}
           />
-          <div className="fixed right-4 top-20 z-50 glass-card neon-glow rounded-xl p-6 w-full max-w-sm max-h-[75vh] overflow-y-auto shadow-xl">
+          <div className="fixed right-4 top-20 z-50 glass-card rounded-xl p-6 w-full max-w-sm max-h-[75vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="flex items-center gap-2 text-base">
                 <History className="w-5 h-5 text-primary" />

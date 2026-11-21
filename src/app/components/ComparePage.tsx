@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Zap, TrendingUp, AlertTriangle, Copy, FileText, AlertCircle, RotateCcw } from 'lucide-react';
+import { ArrowLeft, GitCompare, TrendingUp, AlertTriangle, Copy, FileText, AlertCircle, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar,
@@ -112,8 +112,8 @@ export function ComparePage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-3xl sm:text-4xl neon-text">Compare Analysis</h1>
-          <p className="text-muted-foreground mt-1">Side-by-side manipulation comparison</p>
+          <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">Compare two texts</h1>
+          <p className="text-muted-foreground mt-1">See how their language and risk signals differ</p>
         </div>
       </div>
 
@@ -224,7 +224,7 @@ export function ComparePage() {
               </>
             ) : (
               <>
-                <Zap className="w-5 h-5" />
+                <GitCompare className="w-5 h-5" />
                 Compare Both Texts
               </>
             )}
@@ -322,8 +322,8 @@ export function ComparePage() {
                     <XAxis type="number" domain={[0, 100]} stroke="#6B7A99" fontSize={12} />
                     <YAxis type="category" dataKey="category" stroke="#6B7A99" fontSize={12} width={80} />
                     <Tooltip contentStyle={{ background: 'rgba(13,21,37,0.95)', border: '1px solid rgba(0,229,204,0.2)', borderRadius: '8px', fontSize: '12px' }} />
-                    <Bar dataKey="textA" fill="#FF3B5C" radius={[0, 4, 4, 0]} name="Text A" />
-                    <Bar dataKey="textB" fill="#00E5CC" radius={[0, 4, 4, 0]} name="Text B" />
+                    <Bar dataKey="textA" fill="#b94b42" radius={[0, 4, 4, 0]} name="Text A" />
+                    <Bar dataKey="textB" fill="#286653" radius={[0, 4, 4, 0]} name="Text B" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -390,8 +390,8 @@ export function ComparePage() {
                   <RadarChart data={result.radarData}>
                     <PolarGrid stroke="#1A2640" />
                     <PolarAngleAxis dataKey="tactic" tick={{ fill: '#6B7A99', fontSize: 10 }} />
-                    <Radar name="Text A" dataKey="textA" stroke="#FF3B5C" fill="#FF3B5C" fillOpacity={0.3} />
-                    <Radar name="Text B" dataKey="textB" stroke="#00E5CC" fill="#00E5CC" fillOpacity={0.3} />
+                    <Radar name="Text A" dataKey="textA" stroke="#b94b42" fill="#b94b42" fillOpacity={0.2} />
+                    <Radar name="Text B" dataKey="textB" stroke="#286653" fill="#286653" fillOpacity={0.2} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} iconType="circle" />
                   </RadarChart>
                 </ResponsiveContainer>

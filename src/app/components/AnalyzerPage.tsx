@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Sparkles, Zap, Link as LinkIcon, Upload, AlertTriangle,
-  Newspaper, Mail, MessageSquare, ShoppingBag, Globe,
-  Calendar, User, ExternalLink, AlertCircle, X, FileText,
+  Link as LinkIcon, Upload, AlertTriangle, Newspaper, Mail,
+  Globe, Calendar, User, ExternalLink, AlertCircle, X, FileText, ShieldCheck,
 } from 'lucide-react';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { toast } from 'sonner';
-import { TechnicalPipelineExplorer } from './TechnicalPipelineExplorer';
-import type { PipelineStage } from './TechnicalPipelineExplorer';
 import { analyzeContent, fetchArticlePreview } from '../../services/analysisService';
 import { useAppContext } from '../../context/AppContext';
 import type { AnalysisMode, InputMethod, ArticlePreview } from '../../types';
@@ -19,9 +17,37 @@ const EXAMPLE_TEXTS: Record<AnalysisMode, string> = {
 
 const MIN_TEXT_LENGTH = 20;
 const MAX_TEXT_LENGTH = 50000;
-const PIPELINE_SEQUENCE: PipelineStage[] = ['ingestion', 'feature', 'tier1', 'tier2', 'tier3'];
-const MIN_ANIMATION_TIME_MS = 1800;
-const FINALIZATION_TIME_MS = 500;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const SUPPORTED_FILE_EXTENSIONS = new Set(['.txt', '.eml', '.pdf', '.md', '.csv', '.html', '.htm']);
+
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  const loadingTask = pdfjs.getDocument({ data: await file.arrayBuffer() });
+
+  try {
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      pages.push(content.items
+        .filter((item) => 'str' in item)
+        .map((item) => item.str)
+        .join(' '));
+      if (pages.join('\n').length > MAX_TEXT_LENGTH) break;
+    }
+    return pages.join('\n');
+  } finally {
+    await loadingTask.destroy();
+  }
+}
+
+function extractHtmlText(markup: string): string {
+  const document = new DOMParser().parseFromString(markup, 'text/html');
+  document.querySelectorAll('script, style, noscript').forEach((element) => element.remove());
+  return document.body.textContent ?? '';
+}
 
 function isValidUrl(value: string): boolean {
   try {
@@ -48,8 +74,6 @@ export function AnalyzerPage() {
   const [urlError, setUrlError] = useState('');
   const [textError, setTextError] = useState('');
   const [analyzeError, setAnalyzeError] = useState('');
-  const [pipelineStage, setPipelineStage] = useState<PipelineStage>('idle');
-  const pipelineIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // -----------------------------------------------------------------------
   // Helpers
@@ -68,23 +92,6 @@ export function AnalyzerPage() {
     if (!value.trim()) return 'Please enter a URL.';
     if (!isValidUrl(value.trim())) return 'Please enter a valid URL (must start with http:// or https://).';
     return '';
-  };
-
-  const stopPipelineAnimation = () => {
-    if (pipelineIntervalRef.current) {
-      clearInterval(pipelineIntervalRef.current);
-      pipelineIntervalRef.current = null;
-    }
-  };
-
-  const startPipelineAnimation = () => {
-    stopPipelineAnimation();
-    let idx = 0;
-    setPipelineStage(PIPELINE_SEQUENCE[idx]);
-    pipelineIntervalRef.current = setInterval(() => {
-      idx = (idx + 1) % PIPELINE_SEQUENCE.length;
-      setPipelineStage(PIPELINE_SEQUENCE[idx]);
-    }, 430);
   };
 
   // -----------------------------------------------------------------------
@@ -128,34 +135,55 @@ export function AnalyzerPage() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
 
-    const allowedTypes = ['text/plain', 'message/rfc822', 'application/octet-stream'];
-    const allowedExts = ['.txt', '.eml'];
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
 
-    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
-      toast.error('Unsupported file type. Please upload a .txt or .eml file.');
+    if (!SUPPORTED_FILE_EXTENSIONS.has(extension)) {
+      toast.error('Unsupported file type. Choose a PDF, .txt, .eml, .md, .csv, or HTML file.');
+      input.value = '';
       return;
     }
-    if (file.size > 1024 * 1024) {
-      toast.error('File too large. Maximum size is 1 MB.');
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File too large. Maximum size is 10 MB.');
+      input.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
+    try {
+      const fileContent = extension === '.pdf'
+        ? await extractPdfText(file)
+        : await file.text();
+      const content = extension === '.html' || extension === '.htm'
+        ? extractHtmlText(fileContent)
+        : fileContent;
+
+      if (!content.trim()) {
+        toast.error(extension === '.pdf'
+          ? 'No selectable text was found in this PDF. Scanned PDFs need OCR before they can be analyzed.'
+          : 'This file does not contain readable text.');
+        input.value = '';
+        return;
+      }
+      if (content.length > MAX_TEXT_LENGTH) {
+        toast.error(`Extracted text exceeds the ${MAX_TEXT_LENGTH.toLocaleString()} character limit. Upload a shorter document.`);
+        input.value = '';
+        return;
+      }
+
       setText(content);
       setUploadedFileName(file.name);
       setTextError('');
-      setInputMethod('text');
+      setInputMethod('upload');
       toast.success(`File "${file.name}" loaded (${content.length.toLocaleString()} characters)`);
-    };
-    reader.onerror = () => toast.error('Failed to read file.');
-    reader.readAsText(file);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown file parsing error.';
+      toast.error(`Could not read "${file.name}": ${reason}`);
+      input.value = '';
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -188,8 +216,6 @@ export function AnalyzerPage() {
       : text;
 
     setIsAnalyzing(true);
-    startPipelineAnimation();
-    const analysisStart = Date.now();
 
     try {
       const result = await analyzeContent(
@@ -198,12 +224,6 @@ export function AnalyzerPage() {
         inputMethod,
         inputMethod === 'url' ? url : undefined,
       );
-      const elapsed = Date.now() - analysisStart;
-      if (elapsed < MIN_ANIMATION_TIME_MS) {
-        await new Promise((resolve) => setTimeout(resolve, MIN_ANIMATION_TIME_MS - elapsed));
-      }
-      setPipelineStage('finalizing');
-      await new Promise((resolve) => setTimeout(resolve, FINALIZATION_TIME_MS));
       setCurrentResult(result);
       addToHistory(result);
       navigate('/results');
@@ -212,8 +232,6 @@ export function AnalyzerPage() {
       setAnalyzeError(msg);
       toast.error(msg);
     } finally {
-      stopPipelineAnimation();
-      setPipelineStage('idle');
       setIsAnalyzing(false);
     }
   };
@@ -240,10 +258,6 @@ export function AnalyzerPage() {
     { id: 'email',  label: 'Email',          icon: Mail         },
   ];
 
-  useEffect(() => {
-    return () => stopPipelineAnimation();
-  }, []);
-
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -252,35 +266,37 @@ export function AnalyzerPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Header */}
           <div className="text-center lg:text-left mb-8">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl mb-4 neon-text">
-              Cognitive Manipulation Analysis
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              A clearer read on what you’re reading
+            </p>
+            <h1 className="mb-4 text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
+              Read between<br className="hidden sm:block" /> the lines.
             </h1>
             <p className="text-muted-foreground text-base sm:text-lg max-w-2xl">
-              Professional-grade detection of manipulative language patterns, emotional triggers,
-              and psychological tactics in news and emails.
+              Review a news story or email for pressure tactics, emotional framing, and signals worth a second look.
             </p>
           </div>
 
           {/* Mode Selector */}
           <div className="glass-card rounded-xl p-6">
-            <label className="text-sm text-muted-foreground uppercase tracking-wider mb-3 block">
-              Analysis Mode
+            <label className="text-sm text-muted-foreground mb-3 block">
+              What would you like to review?
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {modes.map((m) => {
                 const Icon = m.icon;
                 return (
                   <button
                     key={m.id}
                     onClick={() => handleModeChange(m.id)}
-                    className={`p-3 rounded-lg transition-all flex flex-col items-center gap-2 ${
+                    className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
                       mode === m.id
-                        ? 'bg-primary/20 text-primary neon-glow border border-primary/40'
+                        ? 'bg-accent text-accent-foreground border-primary/40'
                         : 'bg-secondary/30 text-muted-foreground hover:text-foreground hover:bg-secondary/50 border border-border'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-xs">{m.label}</span>
+                    <Icon className="h-4 w-4" />
+                    <span className="text-sm font-medium">{m.label}</span>
                   </button>
                 );
               })}
@@ -291,7 +307,7 @@ export function AnalyzerPage() {
           <div className="glass-card rounded-xl p-6 space-y-4">
             <div className="flex gap-2 border-b border-border pb-3 flex-wrap">
               {[
-                { id: 'text' as InputMethod,   icon: Sparkles,  label: 'Paste Text'   },
+                { id: 'text' as InputMethod,   icon: FileText, label: 'Paste Text'   },
                 { id: 'url'  as InputMethod,   icon: LinkIcon,  label: 'Paste URL'    },
                 { id: 'upload' as InputMethod, icon: Upload,    label: 'Upload File'  },
               ].map(({ id, icon: Icon, label }) => (
@@ -461,11 +477,13 @@ export function AnalyzerPage() {
               >
                 <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground mb-2">Drop file here or click to upload</p>
-                <p className="text-sm text-muted-foreground mb-4">Supports .txt and .eml files (max 1 MB)</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Supports PDF, TXT, EML, Markdown, CSV, and HTML (max 10 MB). Scanned PDFs require OCR.
+                </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".txt,.eml"
+                  accept=".pdf,.txt,.eml,.md,.csv,.html,.htm"
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
@@ -510,7 +528,7 @@ export function AnalyzerPage() {
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                    <ShieldCheck className="w-4 h-4" />
                     Analyze {mode === 'news' ? 'Article' : 'Email'}
                   </>
                 )}
@@ -521,7 +539,7 @@ export function AnalyzerPage() {
           {/* Quick Examples */}
           <div className="glass-card rounded-xl p-5">
             <label className="text-sm text-muted-foreground uppercase tracking-wider mb-3 block">
-              Quick Test Examples
+              Try an example
             </label>
             <div className="space-y-2">
               {Object.entries(EXAMPLE_TEXTS).map(([key, example]) => (
@@ -549,8 +567,32 @@ export function AnalyzerPage() {
           </div>
         </div>
 
-        {/* Technical Pipeline Explorer */}
-        <TechnicalPipelineExplorer busy={isAnalyzing} stage={pipelineStage} />
+        <aside className="glass-card h-fit rounded-xl p-6 lg:sticky lg:top-24">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">A practical second opinion</p>
+          <h2 className="mb-3 text-2xl font-medium">What gets reviewed</h2>
+          <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
+            The review looks for language patterns that may deserve closer attention. It cannot confirm whether a sender, claim, or story is genuine.
+          </p>
+          <ul className="divide-y divide-border">
+            {[
+              'Urgency and pressure to act',
+              'Fear-based or emotional language',
+              'Claims of authority or identity',
+              'Requests involving money or credentials',
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 py-3 text-sm text-foreground">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                {item}
+              </li>
+            ))}
+          </ul>
+          {isAnalyzing && (
+            <div className="mt-5 flex items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground" role="status">
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
+              Reviewing your content…
+            </div>
+          )}
+        </aside>
       </div>
       </div>
     </>

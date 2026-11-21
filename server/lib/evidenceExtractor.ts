@@ -106,14 +106,18 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
 
     const urgencyManipulationPatterns = [
       'within 24 hours', 'within 48 hours', 'within 2 hours',
+      'in 24 hours', 'in 48 hours', 'in 2 hours',
       'expires today', 'act now', 'immediate action required',
-      'last chance', 'today only', 'before midnight',
+      'unless you verify', 'last chance', 'today only', 'before midnight',
       'offer till', 'sunday only', 'by 31 march',
     ];
 
     const fearInductionPatterns = [
       'unusual activity', 'account suspended',
-      'payment failed', 'account will be closed',
+      'account will be suspended', 'account may be suspended',
+      'account will be closed', 'account will be frozen',
+      'access will be restricted', 'suspended unless',
+      'payment failed',
       'security alert', 'unauthorized access',
       'your account has been', 'action required', 'account frozen',
     ];

@@ -309,8 +309,12 @@ analyzeRouter.post(
       }
 
       if (mode === 'email' && isEmailAnalysisResult(ai)) {
-        const emailScore = ai.manipulation_score;
-        const emailLabel = getEmailLabel(emailScore, ai.email_label);
+        const localScore = localEvidence.manipulationScore;
+        const emailScore = Math.max(ai.manipulation_score, localScore);
+        const emailLabel = getEmailLabel(
+          emailScore,
+          localScore > ai.manipulation_score ? undefined : ai.email_label,
+        );
         const riskLevel = getEmailRiskLevel(emailLabel);
         const recommendedAction = ai.recommended_action || getEmailRecommendedAction(emailLabel);
         const manipulationDescription = getEmailManipulationDescription(emailLabel);

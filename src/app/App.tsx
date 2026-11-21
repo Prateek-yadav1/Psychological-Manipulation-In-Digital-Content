@@ -1,27 +1,11 @@
-import { useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router';
 import { Toaster } from 'sonner';
 import { router } from './routes';
 import { AppProvider } from '../context/AppContext';
-import { LoadingScreen } from './components/LoadingScreen';
 
 export default function App() {
-  const [showStartupLoader, setShowStartupLoader] = useState(true);
-  const [readyToShowApp, setReadyToShowApp] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setReadyToShowApp(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!readyToShowApp) return;
-    setShowStartupLoader(false);
-  }, [readyToShowApp]);
-
   return (
     <AppProvider>
-      <LoadingScreen isVisible={showStartupLoader} message="Starting ManipuLens AI runtime..." />
       <RouterProvider router={router} />
       <Toaster
         position="bottom-right"

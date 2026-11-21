@@ -1,86 +1,85 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ManipuLens AI Professional Futuristic Theme */
   --font-size: 16px;
-  --background: #050b16;
-  --foreground: #e7edf8;
-  --card: #0f1828;
-  --card-foreground: #e7edf8;
-  --popover: #0f1828;
-  --popover-foreground: #e7edf8;
-  --primary: #4e78ff;
-  --primary-foreground: #050b16;
-  --secondary: #1a273b;
-  --secondary-foreground: #e7edf8;
-  --muted: #1a273b;
-  --muted-foreground: #8b9cb7;
-  --accent: #5a8dff;
-  --accent-foreground: #050b16;
-  --destructive: #FF3B5C;
-  --destructive-foreground: #FFFFFF;
-  --warning: #f5b654;
-  --warning-foreground: #050b16;
-  --border: rgba(78, 120, 255, 0.22);
-  --input: rgba(78, 120, 255, 0.15);
-  --input-background: rgba(15, 24, 40, 0.6);
-  --switch-background: #1a273b;
+  --background: #f5f4ef;
+  --foreground: #202a27;
+  --card: #fffefa;
+  --card-foreground: #202a27;
+  --popover: #fffefa;
+  --popover-foreground: #202a27;
+  --primary: #286653;
+  --primary-foreground: #fffefa;
+  --secondary: #eeede6;
+  --secondary-foreground: #303b37;
+  --muted: #eeede6;
+  --muted-foreground: #737c77;
+  --accent: #dfeae3;
+  --accent-foreground: #234b3e;
+  --destructive: #b94b42;
+  --destructive-foreground: #fffefa;
+  --warning: #a76b20;
+  --warning-foreground: #fffefa;
+  --border: #e5e3db;
+  --input: #d9d8d0;
+  --input-background: #fffefa;
+  --switch-background: #d9d8d0;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #4e78ff;
-  --chart-1: #4e78ff;
-  --chart-2: #7aa4ff;
-  --chart-3: #ff5f7c;
-  --chart-4: #f5b654;
-  --chart-5: #6fd4ff;
-  --radius: 0.75rem;
-  --sidebar: #0f1828;
-  --sidebar-foreground: #e7edf8;
-  --sidebar-primary: #4e78ff;
-  --sidebar-primary-foreground: #050b16;
-  --sidebar-accent: #1a273b;
-  --sidebar-accent-foreground: #e7edf8;
-  --sidebar-border: rgba(78, 120, 255, 0.22);
-  --sidebar-ring: #4e78ff;
-  
-  /* Typography */
-  --font-heading: 'Space Mono', monospace;
-  --font-body: 'IBM Plex Sans', sans-serif;
+  --ring: #286653;
+  --chart-1: #286653;
+  --chart-2: #6f947d;
+  --chart-3: #b94b42;
+  --chart-4: #a76b20;
+  --chart-5: #668d93;
+  --radius: 0.8rem;
+  --sidebar: #fffefa;
+  --sidebar-foreground: #202a27;
+  --sidebar-primary: #286653;
+  --sidebar-primary-foreground: #fffefa;
+  --sidebar-accent: #eeede6;
+  --sidebar-accent-foreground: #303b37;
+  --sidebar-border: #e5e3db;
+  --sidebar-ring: #286653;
+  --font-heading: 'Newsreader', Georgia, serif;
+  --font-body: 'DM Sans', 'IBM Plex Sans', sans-serif;
 }
 
 .dark {
-  --background: #050b16;
-  --foreground: #e7edf8;
-  --card: #0f1828;
-  --card-foreground: #e7edf8;
-  --popover: #0f1828;
-  --popover-foreground: #e7edf8;
-  --primary: #4e78ff;
-  --primary-foreground: #050b16;
-  --secondary: #1a273b;
-  --secondary-foreground: #e7edf8;
-  --muted: #1a273b;
-  --muted-foreground: #8b9cb7;
-  --accent: #5a8dff;
-  --accent-foreground: #050b16;
-  --destructive: #FF3B5C;
-  --destructive-foreground: #FFFFFF;
-  --border: rgba(78, 120, 255, 0.22);
-  --input: rgba(78, 120, 255, 0.15);
-  --ring: #4e78ff;
-  --chart-1: #4e78ff;
-  --chart-2: #7aa4ff;
-  --chart-3: #ff5f7c;
-  --chart-4: #f5b654;
-  --chart-5: #6fd4ff;
-  --sidebar: #0f1828;
-  --sidebar-foreground: #e7edf8;
-  --sidebar-primary: #4e78ff;
-  --sidebar-primary-foreground: #050b16;
-  --sidebar-accent: #1a273b;
-  --sidebar-accent-foreground: #e7edf8;
-  --sidebar-border: rgba(78, 120, 255, 0.22);
-  --sidebar-ring: #4e78ff;
+  --background: #f5f4ef;
+  --foreground: #202a27;
+  --card: #fffefa;
+  --card-foreground: #202a27;
+  --popover: #fffefa;
+  --popover-foreground: #202a27;
+  --primary: #286653;
+  --primary-foreground: #fffefa;
+  --secondary: #eeede6;
+  --secondary-foreground: #303b37;
+  --muted: #eeede6;
+  --muted-foreground: #737c77;
+  --accent: #dfeae3;
+  --accent-foreground: #234b3e;
+  --destructive: #b94b42;
+  --destructive-foreground: #fffefa;
+  --warning: #a76b20;
+  --warning-foreground: #fffefa;
+  --border: #e5e3db;
+  --input: #d9d8d0;
+  --ring: #286653;
+  --chart-1: #286653;
+  --chart-2: #6f947d;
+  --chart-3: #b94b42;
+  --chart-4: #a76b20;
+  --chart-5: #668d93;
+  --sidebar: #fffefa;
+  --sidebar-foreground: #202a27;
+  --sidebar-primary: #286653;
+  --sidebar-primary-foreground: #fffefa;
+  --sidebar-accent: #eeede6;
+  --sidebar-accent-foreground: #303b37;
+  --sidebar-border: #e5e3db;
+  --sidebar-ring: #286653;
 }
 
 @theme inline {
@@ -138,33 +137,12 @@
     overflow-x: hidden;
   }
 
-  /* Futuristic layered background */
   body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: 
-      radial-gradient(ellipse at 50% 0%, rgba(78, 120, 255, 0.18) 0%, transparent 52%),
-      radial-gradient(ellipse at 80% 50%, rgba(111, 212, 255, 0.09) 0%, transparent 48%),
-      radial-gradient(ellipse at 20% 80%, rgba(140, 163, 194, 0.12) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
+    content: none;
   }
 
-  /* Noise texture overlay */
   body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 1;
+    content: none;
   }
 
   html {
@@ -220,24 +198,22 @@
     font-family: var(--font-body);
   }
 
-  /* Neon glow utilities */
   .neon-glow {
-    box-shadow: 
-      0 0 10px rgba(0, 229, 204, 0.3),
-      0 0 20px rgba(0, 229, 204, 0.2),
-      0 0 30px rgba(0, 229, 204, 0.1);
+    box-shadow: 0 4px 12px rgba(32, 42, 39, 0.08);
   }
 
   .neon-text {
-    text-shadow: 
-      0 0 10px rgba(0, 229, 204, 0.5),
-      0 0 20px rgba(0, 229, 204, 0.3);
+    text-shadow: none;
   }
 
   .glass-card {
-    background: rgba(13, 21, 37, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 229, 204, 0.2);
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(32, 42, 39, 0.035), 0 8px 24px rgba(32, 42, 39, 0.025);
+  }
+
+  ::selection {
+    background: #d5e5db;
+    color: #202a27;
   }
 }
