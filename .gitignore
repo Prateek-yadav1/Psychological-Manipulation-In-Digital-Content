@@ -34,7 +34,9 @@ models/
 mindguard_models/
 prepared_manipulation_dataset/
 datasets/
-data/
+/data/
+!server/data/
+!server/data/**
 files/
 files (3)/
 jarvis-ai-main/

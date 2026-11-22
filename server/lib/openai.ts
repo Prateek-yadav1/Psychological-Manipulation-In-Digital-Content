@@ -119,12 +119,30 @@ interface RubricCategory {
   risk_level: string; example_phrases: string[];
 }
 
+const DEFAULT_RUBRIC_CATEGORIES: RubricCategory[] = [
+  { id: 'urgency', category: 'Artificial Urgency', weight: 14, risk_level: 'high', example_phrases: ['act now', 'immediately', 'within 24 hours', 'last chance'] },
+  { id: 'fear', category: 'Fear Induction', weight: 14, risk_level: 'high', example_phrases: ['account will be suspended', 'serious consequences', 'you will lose everything'] },
+  { id: 'authority', category: 'Authority Exploitation', weight: 12, risk_level: 'high', example_phrases: ['government approved', 'official notification', 'experts confirm'] },
+  { id: 'scarcity', category: 'Scarcity and Exclusivity', weight: 10, risk_level: 'medium', example_phrases: ['limited availability', 'only a few left', 'exclusive opportunity'] },
+  { id: 'social_proof', category: 'Social Proof Manipulation', weight: 10, risk_level: 'medium', example_phrases: ['everyone is doing it', 'millions of people agree', 'everyone knows'] },
+  { id: 'emotional_appeal', category: 'Emotional Manipulation', weight: 10, risk_level: 'medium', example_phrases: ['think about your family', 'shocking truth', 'how could you allow this'] },
+  { id: 'loaded_language', category: 'Loaded and Biased Language', weight: 10, risk_level: 'medium', example_phrases: ['disastrous failure', 'shocking revelation', 'evil agenda'] },
+  { id: 'false_dilemma', category: 'False Dilemma', weight: 10, risk_level: 'medium', example_phrases: ['you are either with us or against us', 'no other choice', 'only two options'] },
+  { id: 'identity_deception', category: 'Identity and Source Deception', weight: 12, risk_level: 'high', example_phrases: ['verify your account', 'official bank representative', 'confirm your identity'] },
+  { id: 'financial_manipulation', category: 'Financial Manipulation', weight: 10, risk_level: 'high', example_phrases: ['guaranteed returns', 'claim your prize', 'risk free investment'] },
+  { id: 'secrecy_isolation', category: 'Secrecy and Isolation', weight: 8, risk_level: 'high', example_phrases: ['keep this confidential', 'do not tell anyone', 'act without telling your family'] },
+];
+
 let _rubricCategories: RubricCategory[] | null = null;
 
 function getRubricSnippet(): string {
   if (!_rubricCategories) {
-    const raw = JSON.parse(readFileSync(join(__dirname, '../data/scoringRubric.json'), 'utf-8')) as { categories: RubricCategory[] };
-    _rubricCategories = raw.categories;
+    try {
+      const raw = JSON.parse(readFileSync(join(__dirname, '../data/scoringRubric.json'), 'utf-8')) as { categories: RubricCategory[] };
+      _rubricCategories = raw.categories;
+    } catch {
+      _rubricCategories = DEFAULT_RUBRIC_CATEGORIES;
+    }
   }
   return _rubricCategories
     .map(c => `  • ${c.category} (weight ${c.weight}, ${c.risk_level} risk): ${c.example_phrases.slice(0, 4).join(', ')}…`)

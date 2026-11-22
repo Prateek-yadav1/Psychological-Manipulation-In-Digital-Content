@@ -50,13 +50,31 @@ export interface ExtractionResult {
 }
 
 // ─── Load rubric once ─────────────────────────────────────────────────────────
+const FALLBACK_RUBRIC_CATEGORIES: RubricCategory[] = [
+  { id: 'urgency', category: 'Artificial Urgency', description: 'Creates artificial time pressure to prevent careful thinking, verification, or informed decision-making.', weight: 14, risk_level: 'high', example_phrases: ['act now', 'immediately', 'within 24 hours', 'last chance', 'expires today'] },
+  { id: 'fear', category: 'Fear Induction', description: 'Uses threats, alarming consequences, or frightening scenarios to influence decisions through fear.', weight: 14, risk_level: 'high', example_phrases: ['you will lose everything', 'account will be suspended', 'serious consequences', 'your safety is at risk'] },
+  { id: 'authority', category: 'Authority Exploitation', description: 'Uses institutional status, experts, officials, or authoritative language to discourage questioning.', weight: 12, risk_level: 'high', example_phrases: ['government approved', 'official notification', 'experts confirm', 'according to authorities'] },
+  { id: 'scarcity', category: 'Scarcity and Exclusivity', description: 'Creates perceived scarcity or exclusivity to pressure people into acting before evaluating alternatives.', weight: 10, risk_level: 'medium', example_phrases: ['limited availability', 'only a few left', 'exclusive opportunity', 'limited time offer'] },
+  { id: 'social_proof', category: 'Social Proof Manipulation', description: 'Uses popularity, group behavior, or alleged public consensus to pressure individuals into agreement.', weight: 10, risk_level: 'medium', example_phrases: ['everyone is doing it', 'millions of people agree', 'everyone knows'] },
+  { id: 'emotional_appeal', category: 'Emotional Manipulation', description: 'Exploits emotional responses such as guilt, outrage, sympathy, or excitement to influence judgment.', weight: 10, risk_level: 'medium', example_phrases: ['think about your family', 'how could you allow this', 'shocking truth'] },
+  { id: 'loaded_language', category: 'Loaded and Biased Language', description: 'Uses emotionally charged, exaggerated, or judgmental language to shape perception without sufficient evidence.', weight: 10, risk_level: 'medium', example_phrases: ['disastrous failure', 'shocking revelation', 'evil agenda', 'corrupt system'] },
+  { id: 'false_dilemma', category: 'False Dilemma', description: 'Presents limited or extreme choices as the only available options while ignoring reasonable alternatives.', weight: 10, risk_level: 'medium', example_phrases: ['you are either with us or against us', 'no other choice', 'only two options'] },
+  { id: 'identity_deception', category: 'Identity and Source Deception', description: 'Misrepresents identity, impersonates trusted entities, or conceals the true origin of a message.', weight: 12, risk_level: 'high', example_phrases: ['verify your account', 'official bank representative', 'government officer'] },
+  { id: 'financial_manipulation', category: 'Financial Manipulation', description: 'Uses unrealistic financial promises, deceptive rewards, or monetary pressure to influence decisions.', weight: 10, risk_level: 'high', example_phrases: ['guaranteed returns', 'claim your prize', 'risk free investment'] },
+  { id: 'secrecy_isolation', category: 'Secrecy and Isolation', description: 'Discourages independent verification, consultation, or discussion with trusted people.', weight: 8, risk_level: 'high', example_phrases: ['keep this confidential', 'do not tell anyone', 'act without telling your family'] },
+];
+
 let _rubric: RubricCategory[] | null = null;
 
 function getRubric(): RubricCategory[] {
   if (_rubric) return _rubric;
-  const rubricPath = join(__dirname, '../data/scoringRubric.json');
-  const raw = JSON.parse(readFileSync(rubricPath, 'utf-8')) as { categories: RubricCategory[] };
-  _rubric = raw.categories;
+  try {
+    const rubricPath = join(__dirname, '../data/scoringRubric.json');
+    const raw = JSON.parse(readFileSync(rubricPath, 'utf-8')) as { categories: RubricCategory[] };
+    _rubric = raw.categories;
+  } catch {
+    _rubric = FALLBACK_RUBRIC_CATEGORIES;
+  }
   return _rubric;
 }
 
