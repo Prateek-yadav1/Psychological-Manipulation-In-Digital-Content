@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
+import { existsSync } from 'node:fs';
+
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
 dotenv.config({
@@ -53,6 +55,18 @@ app.get('/api/health', (_req, res) => {
     },
   });
 });
+
+// ─── Static Frontend (Production Build) ───────────────────────────────────────
+const distPath = resolve(currentDir, '../dist');
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(resolve(distPath, 'index.html'));
+    }
+    next();
+  });
+}
 
 // ─── Error handler (must be last) ────────────────────────────────────────────
 app.use(errorHandler);
