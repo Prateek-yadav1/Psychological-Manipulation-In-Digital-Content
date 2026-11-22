@@ -6,9 +6,7 @@
  * 1. Benchmark evaluation (fast, no API cost)
  * 2. Cross-validation of OpenAI scores
  * 3. Phrase-level evidence extraction for transparency
- *
- * All scoring is fully explainable: every point can be traced back
- * to a specific phrase in the rubric and its documented weight.
+ * 4. Reliable offline / rule-based fallback
  */
 
 import { readFileSync } from 'fs';
@@ -62,14 +60,89 @@ function getRubric(): RubricCategory[] {
   return _rubric;
 }
 
+// ─── Extended Manipulation Vocabulary ─────────────────────────────────────────
+const EXTENDED_TACTIC_PATTERNS: Record<string, string[]> = {
+  urgency: [
+    'act now', 'immediately', 'within 24 hours', 'within 48 hours', 'within 2 hours',
+    'last chance', 'expires today', 'time is running out', 'respond immediately',
+    'before midnight', 'breaking:', 'breaking news', "don't wait", 'hurry',
+    "before it's too late", 'right now', 'urgent alert', 'critical deadline',
+    'must see', 'must read', 'urgent:', 'do not delay', 'action required today',
+  ],
+  fear: [
+    'you will lose everything', 'account will be suspended', 'account may be suspended',
+    'account will be closed', 'account will be frozen', 'access will be restricted',
+    'serious consequences', 'your safety is at risk', 'dangerous situation',
+    'you could be arrested', 'security threat', 'catastrophic consequences',
+    'doomsday', 'terrifying', 'deadly threat', 'imminent collapse',
+    'dangerously close', 'fatal', 'grave danger', 'peril', 'panic',
+    'disaster strikes', 'horrifying danger', 'under attack', 'catastrophe',
+  ],
+  authority: [
+    'government approved', 'official notification', 'experts confirm',
+    'experts reveal', 'experts say', 'scientists reveal', 'scientists warn',
+    'according to authorities', 'mandatory compliance', 'legal action',
+    'regulatory requirement', 'official announcement', 'insiders confirm',
+    'top officials warn', 'whistleblower exposes', 'undeniable proof',
+    'unquestionable fact', 'official decree', 'court order', 'law enforcement',
+  ],
+  scarcity: [
+    'limited availability', 'only a few left', 'exclusive opportunity',
+    'limited time offer', 'only today', 'while stocks last', 'one time opportunity',
+    'last few spots', 'rare access', 'secretly available', 'never seen before',
+    'before it gets taken down', 'spots are filling up', 'almost sold out',
+  ],
+  social_proof: [
+    'everyone is doing it', 'millions of people agree', 'everyone knows',
+    'everyone must know', 'join thousands of people', 'the majority believes',
+    'widely accepted', 'people everywhere', 'trending worldwide',
+    'everybody is talking about', 'millions are switching', 'no one can deny',
+    'all smart people', 'the world is watching',
+  ],
+  emotional_appeal: [
+    'think about your family', 'how could you allow this', 'shocking truth',
+    'heartbreaking situation', 'you should feel ashamed', 'betrayal of trust',
+    'outrageous behavior', 'emotional blackmail', "you won't believe",
+    'unbelievable truth', 'heart wrenching', 'tearful', 'horrifying',
+    'devastating news', 'makes your blood boil', 'sensational',
+  ],
+  loaded_language: [
+    'disastrous failure', 'shocking revelation', 'evil agenda', 'corrupt system',
+    'traitors', 'complete disaster', 'unbelievable scandal', 'dangerous enemies',
+    'pure evil', 'sinister plot', 'shameless', 'vile', 'disgraceful',
+    'slams', 'blasts', 'destroys', 'meltdown', 'chaos', 'puppet', 'scandalous',
+  ],
+  false_dilemma: [
+    'you are either with us or against us', 'no other choice', 'only two options',
+    'either accept or fail', 'there is no alternative', 'choose one or lose everything',
+    'if you disagree then', 'all or nothing', 'do or die', 'our only hope',
+    'the only way out',
+  ],
+  identity_deception: [
+    'verify your account', 'official bank representative', 'government officer',
+    'your account has been compromised', 'confirm your identity',
+    'send your verification code', 'official security department',
+    'authorized representative', 'impersonating', 'fake notice',
+    'security team', 'kyc verification', 'compliance officer',
+  ],
+  financial_manipulation: [
+    'guaranteed returns', 'claim your prize', 'risk free investment',
+    'double your money', 'processing fee', 'instant cash reward',
+    'limited investment opportunity', 'guaranteed profit', 'free money',
+    'get rich quick', '100% risk free', 'refund department', 'lottery winner',
+  ],
+  secrecy_isolation: [
+    'keep this confidential', 'do not tell anyone', 'do not contact anyone',
+    'act without telling your family', 'this is strictly confidential',
+    'do not discuss this', 'keep this between us', 'avoid outside advice',
+    'delete after reading', 'they are hiding this from you',
+    'censored by mainstream', 'what they don’t want you to know',
+  ],
+};
+
 // ─── Core extraction function ────────────────────────────────────────────────
 
-/**
- * Extracts manipulation evidence from text using the scoring rubric.
- * Returns a fully transparent, phrase-level breakdown.
- */
 export function extractEvidence(text: string, mode = 'news'): ExtractionResult {
-  // Email mode has a dedicated deterministic scorer tuned for phishing/spam.
   return extractEvidenceByMode(text, mode);
 }
 
@@ -100,15 +173,15 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
       'rbi circular', 'trai notice', 'it department',
       'sbi kyc', 'hdfc kyc', 'icici kyc',
       'verify your account', 'verify your identity', 'mandatory verification',
-      'kyc update',
-      'regulatory compliance', 'legal action',
+      'kyc update', 'regulatory compliance', 'legal action',
     ];
 
     const urgencyManipulationPatterns = [
       'within 24 hours', 'within 48 hours', 'within 2 hours',
       'in 24 hours', 'in 48 hours', 'in 2 hours',
       'expires today', 'act now', 'immediate action required',
-      'unless you verify', 'last chance', 'today only', 'before midnight',
+      'unless you verify', 'verify immediately', 'immediately', 'urgent',
+      'last chance', 'today only', 'before midnight',
       'offer till', 'sunday only', 'by 31 march',
     ];
 
@@ -117,8 +190,7 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
       'account will be suspended', 'account may be suspended',
       'account will be closed', 'account will be frozen',
       'access will be restricted', 'suspended unless',
-      'payment failed',
-      'security alert', 'unauthorized access',
+      'payment failed', 'security alert', 'unauthorized access',
       'your account has been', 'action required', 'account frozen',
     ];
 
@@ -137,49 +209,36 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
       'official website only',
     ];
 
-    for (const pattern of identityDeceptionPatterns) {
-      if (textLower.includes(pattern)) {
-        score += 35;
-        evidence.push(`Identity deception signal: "${pattern}"`);
+    const matchCategory = (patterns: string[], points: number, typeName: string) => {
+      const sorted = [...patterns].sort((a, b) => b.length - a.length);
+      const matchedInCat: string[] = [];
+      for (const pattern of sorted) {
+        if (textLower.includes(pattern)) {
+          const isCovered = matchedInCat.some(m => m.includes(pattern));
+          if (!isCovered) {
+            matchedInCat.push(pattern);
+            score += points;
+            evidence.push(`${typeName}: "${pattern}"`);
+          }
+        }
       }
-    }
-    for (const pattern of financialManipulationPatterns) {
-      if (textLower.includes(pattern)) {
-        score += 28;
-        evidence.push(`Financial manipulation signal: "${pattern}"`);
-      }
-    }
-    for (const pattern of authorityExploitationPatterns) {
-      if (textLower.includes(pattern)) {
-        score += 22;
-        evidence.push(`Authority exploitation signal: "${pattern}"`);
-      }
-    }
-    for (const pattern of urgencyManipulationPatterns) {
-      if (textLower.includes(pattern)) {
-        score += 18;
-        evidence.push(`Urgency manipulation signal: "${pattern}"`);
-      }
-    }
-    for (const pattern of fearInductionPatterns) {
-      if (textLower.includes(pattern)) {
-        score += 12;
-        evidence.push(`Fear induction signal: "${pattern}"`);
-      }
-    }
-    for (const pattern of mildInfluencePatterns) {
-      if (textLower.includes(pattern)) {
-        score += 6;
-        evidence.push(`Mild influence signal: "${pattern}"`);
-      }
-    }
+    };
+
+    matchCategory(identityDeceptionPatterns, 35, 'Identity deception signal');
+    matchCategory(financialManipulationPatterns, 28, 'Financial manipulation signal');
+    matchCategory(authorityExploitationPatterns, 22, 'Authority exploitation signal');
+    matchCategory(urgencyManipulationPatterns, 18, 'Urgency manipulation signal');
+    matchCategory(fearInductionPatterns, 14, 'Fear induction signal');
+    matchCategory(mildInfluencePatterns, 8, 'Mild influence signal');
+
     for (const pattern of legitimatePatterns) {
       if (textLower.includes(pattern)) {
-        score -= 12;
+        score -= 15;
       }
     }
 
-    const boundedScore = Math.max(0, Math.min(100, score));
+    // Baseline minimum score for legitimate/neutral
+    const boundedScore = evidence.length === 0 ? 8 : Math.max(10, Math.min(98, score));
     const label =
       boundedScore <= 15 ? 'legitimate'
       : boundedScore <= 30 ? 'mild_influence'
@@ -188,10 +247,10 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
       : boundedScore <= 75 ? 'authority_exploitation'
       : boundedScore <= 85 ? 'financial_manipulation'
       : 'identity_deception';
-    const risk =
+
+    const risk: 'low' | 'medium' | 'high' =
       label === 'legitimate' || label === 'mild_influence' ? 'low'
       : label === 'fear_induction' ? 'medium'
-      : label === 'urgency_manipulation' || label === 'authority_exploitation' ? 'high'
       : 'high';
 
     return {
@@ -225,48 +284,52 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
     };
   }
 
+  // ── General / News Mode ─────────────────────────────────────────────────────
   const rubric    = getRubric();
   const lower     = text.toLowerCase();
-  const wordCount = Math.max(text.split(/\s+/).filter(Boolean).length, 1);
 
   // ── ALL-CAPS bonus (each caps word = shouting effect)
   const capsWords  = text.split(/\s+/).filter(w => w.length > 2 && w === w.toUpperCase() && /[A-Z]/.test(w));
-  const capsBonus  = Math.min(capsWords.length * 6, 25);
+  const capsBonus  = Math.min(capsWords.length * 5, 20);
 
   // ── Exclamation mark bonus
   const exclamCount = (text.match(/!/g) ?? []).length;
-  const exclamBonus = Math.min(exclamCount * 4, 15);
+  const exclamBonus = Math.min(exclamCount * 3, 15);
 
   const tacticEvidence: TacticEvidence[] = [];
   const categoryScores: Record<string, number> = {};
 
   for (const category of rubric) {
     const matchedPhrases: string[] = [];
+    const searchPhrases = [
+      ...category.example_phrases,
+      ...(EXTENDED_TACTIC_PATTERNS[category.id] || []),
+    ];
 
-    for (const phrase of category.example_phrases) {
+    for (const phrase of searchPhrases) {
       if (lower.includes(phrase.toLowerCase())) {
-        // Find original casing in text
-        const re    = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        const re = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
         const match = text.match(re);
         matchedPhrases.push(match ? match[0] : phrase);
       }
     }
 
-    if (matchedPhrases.length > 0) {
-      // Score = weight × (1 + 0.3 per additional match, capped at 1.9)
-      const multiplier  = Math.min(1 + (matchedPhrases.length - 1) * 0.3, 1.9);
-      const rawScore    = category.weight * multiplier;
-      // Normalise by word count: longer texts shouldn't automatically score higher
-      const normFactor  = Math.min(50 / wordCount + 0.5, 1.5);
-      const finalScore  = Math.round(rawScore * normFactor);
+    const uniquePhrases = [...new Set(matchedPhrases)];
 
-      categoryScores[category.id] = finalScore;
+    if (uniquePhrases.length > 0) {
+      // Base category weight depending on risk level
+      const baseWeight = category.risk_level === 'high' ? 26 : category.risk_level === 'medium' ? 18 : 12;
+      // Multiplier for phrase reinforcement
+      const multiplier = 1 + Math.min((uniquePhrases.length - 1) * 0.25, 1.25);
+      const catScore = Math.min(Math.round(baseWeight * multiplier), 50);
+
+      categoryScores[category.id] = catScore;
       tacticEvidence.push({
         tactic:       category.category,
         tacticId:     category.id,
-        phrases:      [...new Set(matchedPhrases)].slice(0, 5),
-        score:        finalScore,
-        contribution: finalScore,
+        phrases:      uniquePhrases.slice(0, 6),
+        score:        catScore,
+        contribution: catScore,
         risk:         category.risk_level,
         description:  category.description,
       });
@@ -275,17 +338,31 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
     }
   }
 
-  // ── Sort evidence by contribution descending
-  tacticEvidence.sort((a, b) => b.contribution - a.contribution);
+  // ── Sort evidence by score descending
+  tacticEvidence.sort((a, b) => b.score - a.score);
 
-  // ── Raw manipulation score = sum of tactic scores + bonuses
-  const tacticSum     = tacticEvidence.reduce((s, t) => s + t.contribution, 0);
-  const rawScore      = tacticSum + capsBonus * 0.6 + exclamBonus * 0.5;
+  // ── Compound manipulation scoring
+  let manipulationScore = 10; // Default baseline for neutral text
 
-  // ── Normalise to 0–100
-  const MAX_POSSIBLE  = 120; // theoretical maximum if all 11 categories fire at max weight
-  const normalised    = Math.min(Math.round((rawScore / MAX_POSSIBLE) * 100), 97);
-  const manipulationScore = Math.max(normalised, 0);
+  if (tacticEvidence.length > 0) {
+    // Dominant tactic carries primary weight
+    let aggregate = tacticEvidence[0].score;
+
+    // Secondary and tertiary tactics compound the manipulation risk
+    for (let i = 1; i < tacticEvidence.length; i++) {
+      const weight = i === 1 ? 0.6 : i === 2 ? 0.4 : 0.2;
+      aggregate += tacticEvidence[i].score * weight;
+    }
+
+    // Add caps and exclamation intensity
+    aggregate += capsBonus * 0.5 + exclamBonus * 0.5;
+
+    manipulationScore = Math.max(20, Math.min(Math.round(aggregate), 98));
+  } else {
+    // If no tactics were detected, check if text has extreme caps/exclamation shouting
+    const shoutScore = Math.round(capsBonus * 0.6 + exclamBonus * 0.6);
+    manipulationScore = Math.max(8, Math.min(10 + shoutScore, 40));
+  }
 
   const dominantTactic = tacticEvidence.length > 0 ? tacticEvidence[0].tactic : null;
 
@@ -310,8 +387,7 @@ export function extractEvidenceByMode(text: string, mode: string): ExtractionRes
 }
 
 /**
- * Lightweight version that only returns the score and dominant tactic.
- * Used for benchmark evaluation to avoid allocating full evidence objects.
+ * Lightweight version that only returns the score.
  */
 export function quickScore(text: string, mode = 'news'): number {
   return extractEvidenceByMode(text, mode).manipulationScore;
@@ -319,13 +395,11 @@ export function quickScore(text: string, mode = 'news'): number {
 
 /**
  * Build highlighted word annotations from evidence.
- * Marks each token in the text as manipulative if it appears in detected phrases.
  */
 export function buildHighlightedWordsFromEvidence(
   text:     string,
   evidence: TacticEvidence[],
 ): Array<{ word: string; manipulative: boolean; level?: 'high' | 'medium' | 'low' }> {
-  // Build a map of suspicious word → risk level
   const riskyMap = new Map<string, 'high' | 'medium' | 'low'>();
 
   for (const tactic of evidence) {

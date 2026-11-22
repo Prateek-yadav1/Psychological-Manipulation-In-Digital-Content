@@ -62,21 +62,29 @@ async function chatWithFallback(
   const errors: string[] = [];
 
   if (hasGroqKey()) {
-    try {
-      const completion = await getGroqClient().chat.completions.create({
-        model: GROQ_MODEL,
-        messages,
-        response_format: { type: 'json_object' },
-        temperature: 0.1,
-        max_tokens: maxTokens,
-      });
-      const raw = completion.choices[0]?.message?.content;
-      if (!raw) throw new Error('Groq returned an empty response.');
-      return { raw, provider: 'groq', model: GROQ_MODEL };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`Groq: ${msg}`);
-      console.warn('[LLM] Groq failed, trying OpenAI fallback…', msg);
+    const groqModelsToTry = [
+      GROQ_MODEL,
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+    ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
+
+    for (const modelToTry of groqModelsToTry) {
+      try {
+        const completion = await getGroqClient().chat.completions.create({
+          model: modelToTry,
+          messages,
+          response_format: { type: 'json_object' },
+          temperature: 0.1,
+          max_tokens: maxTokens,
+        });
+        const raw = completion.choices[0]?.message?.content;
+        if (!raw) throw new Error(`Groq (${modelToTry}) returned an empty response.`);
+        return { raw, provider: 'groq', model: modelToTry };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`Groq (${modelToTry}): ${msg}`);
+        console.warn(`[LLM] Groq (${modelToTry}) failed: ${msg}`);
+      }
     }
   }
 
@@ -124,87 +132,104 @@ function getRubricSnippet(): string {
 }
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
+const clampedScore = z.coerce.number().transform(v => Math.max(0, Math.min(100, Math.round(v))));
+
 const TacticEvidenceSchema = z.object({
   tactic:       z.string().min(1),
-  phrases:      z.array(z.string()).min(1).max(8),
-  score:        z.number().int().min(0).max(100),
-  contribution: z.number().int().min(0).max(100),
-  description:  z.string().min(1),
+  phrases:      z.array(z.string()).default([]),
+  score:        clampedScore,
+  contribution: clampedScore,
+  description:  z.string().default('Detected manipulation pattern'),
 });
 
 const TacticSchema = z.object({
   name:  z.string().min(1),
-  value: z.number().int().min(0).max(100),
-  color: z.string().min(1),
+  value: clampedScore,
+  color: z.string().default('#00E5CC'),
 });
 
 const PhraseSchema = z.object({
   phrase:   z.string().min(1),
-  risk:     z.enum(['high', 'medium']),
-  category: z.string().min(1),
+  risk:     z.enum(['high', 'medium', 'low', 'critical']).catch('medium'),
+  category: z.string().default('General'),
 });
 
 const RadarSchema = z.object({
   metric: z.string().min(1),
-  value:  z.number().int().min(0).max(100),
+  value:  clampedScore,
 });
 
 const BarSchema = z.object({
   tactic: z.string().min(1),
-  score:  z.number().int().min(0).max(100),
+  score:  clampedScore,
 });
 
 export const OpenAIResponseSchema = z.object({
-  manipulationScore:  z.number().int().min(0).max(100),
-  trustScore:         z.number().int().min(0).max(100),
-  confidence:         z.number().int().min(0).max(100),
-  biasLevel:          z.number().int().min(0).max(100),
-  emotionalIntensity: z.number().int().min(0).max(100),
-  urgencyScore:       z.number().int().min(0).max(100),
-  authorityScore:     z.number().int().min(0).max(100),
-  riskLevel:          z.enum(['high', 'medium', 'low']),
-  tactics:            z.array(TacticSchema).min(1).max(10),
-  suspiciousPhrases:  z.array(PhraseSchema).max(10),
-  radarData:          z.array(RadarSchema).min(3).max(8),
-  barData:            z.array(BarSchema).min(3).max(8),
-  neutralRewrite:     z.string().min(1),
-  explanation:        z.string().min(1),
-  recommendedAction:  z.string().min(1),
-  tacticEvidence:     z.array(TacticEvidenceSchema).max(11),
+  manipulationScore:  clampedScore,
+  trustScore:         clampedScore,
+  confidence:         clampedScore,
+  biasLevel:          clampedScore,
+  emotionalIntensity: clampedScore,
+  urgencyScore:       clampedScore,
+  authorityScore:     clampedScore,
+  riskLevel:          z.enum(['high', 'medium', 'low', 'critical']).catch('medium'),
+  tactics:            z.array(TacticSchema).default([]),
+  suspiciousPhrases:  z.array(PhraseSchema).default([]),
+  radarData:          z.array(RadarSchema).default([]),
+  barData:            z.array(BarSchema).default([]),
+  neutralRewrite:     z.string().default(''),
+  explanation:        z.string().default('Analysis complete.'),
+  recommendedAction:  z.string().default('Review content critically.'),
+  tacticEvidence:     z.array(TacticEvidenceSchema).default([]),
 });
 
 export const EmailOpenAIResponseSchema = z.object({
-  email_label: z.enum([
-    'legitimate',
-    'mild_influence',
-    'fear_induction',
-    'urgency_manipulation',
-    'authority_exploitation',
-    'financial_manipulation',
-    'identity_deception',
-  ]),
-  manipulation_score: z.number().int().min(0).max(100),
-  risk_level: z.enum(['low', 'medium', 'high', 'critical']),
-  confidence: z.number().int().min(0).max(100),
-  dimension_scores: z.object({
-    sender_legitimacy: z.number().int().min(0).max(100),
-    urgency_pressure: z.number().int().min(0).max(100),
-    threat_fear: z.number().int().min(0).max(100),
-    credential_payment_request: z.number().int().min(0).max(100),
-    link_url_analysis: z.number().int().min(0).max(100),
-    social_engineering_tactics: z.number().int().min(0).max(100),
+  email_label: z.string().transform(v => {
+    const norm = v.toLowerCase().trim().replace(/[\s-]+/g, '_');
+    const valid = [
+      'legitimate',
+      'mild_influence',
+      'fear_induction',
+      'urgency_manipulation',
+      'authority_exploitation',
+      'financial_manipulation',
+      'identity_deception',
+    ];
+    return (valid.includes(norm) ? norm : 'mild_influence') as
+      | 'legitimate'
+      | 'mild_influence'
+      | 'fear_induction'
+      | 'urgency_manipulation'
+      | 'authority_exploitation'
+      | 'financial_manipulation'
+      | 'identity_deception';
   }),
-  manipulation_tactic: z.string().min(1),
-  cognitive_bias_exploited: z.string().min(1),
-  red_flags: z.array(z.string()).max(20),
-  legitimate_indicators: z.array(z.string()).max(20),
-  recommended_action: z.string().min(1),
-  explanation: z.string().min(1),
+  manipulation_score: clampedScore,
+  risk_level: z.enum(['low', 'medium', 'high', 'critical']).catch('medium'),
+  confidence: clampedScore,
+  dimension_scores: z.object({
+    sender_legitimacy:          clampedScore,
+    urgency_pressure:           clampedScore,
+    threat_fear:                clampedScore,
+    credential_payment_request: clampedScore,
+    link_url_analysis:          clampedScore,
+    social_engineering_tactics: clampedScore,
+  }),
+  manipulation_tactic:      z.string().default('General persuasion'),
+  cognitive_bias_exploited: z.string().default('none'),
+  red_flags:                z.array(z.string()).default([]),
+  legitimate_indicators:    z.array(z.string()).default([]),
+  recommended_action:       z.string().default('Exercise standard caution.'),
+  explanation:              z.string().default('Email evaluated against manipulation taxonomy.'),
 });
 
 export type OpenAIStandardAnalysisResult = z.infer<typeof OpenAIResponseSchema>;
 export type OpenAIEmailAnalysisResult = z.infer<typeof EmailOpenAIResponseSchema>;
 export type OpenAIAnalysisResult = OpenAIStandardAnalysisResult | OpenAIEmailAnalysisResult;
+
+export function isStandardAnalysisResult(result: OpenAIAnalysisResult): result is OpenAIStandardAnalysisResult {
+  return 'manipulationScore' in result;
+}
 
 export function isEmailAnalysisResult(result: OpenAIAnalysisResult): result is OpenAIEmailAnalysisResult {
   return 'manipulation_score' in result;
@@ -223,13 +248,13 @@ CONFIDENCE SCORING:
 • Low confidence (50-64): Very short text, few signals, or highly ambiguous
 
 SCORING GUIDE:
-• 0-20:  Neutral — no meaningful manipulation
-• 21-40: Mild — minor persuasive language
-• 41-60: Moderate — clear manipulation tactics
-• 61-80: Strong — multiple high-risk tactics
-• 81-100: Extreme — maximum manipulation
+• 0-20:  Neutral — factual, objective, standard journalistic reporting with no meaningful manipulation
+• 21-40: Mild — minor persuasive language or subtle marketing rhetoric
+• 41-60: Moderate — clear emotional appeal, urgency, or selective framing
+• 61-80: Strong — multiple concurrent high-risk tactics (fear, urgency, false authority, outrage)
+• 81-100: Extreme — maximum manipulation (conspiracy theories, severe fearmongering, deceptive propaganda)
 
-IMPORTANT: Every score must be traceable to specific evidence. Do not guess. If you have little evidence, lower your confidence and your score accordingly.
+IMPORTANT: Every score must be traceable to specific evidence. Do not guess. If text is neutral, set manipulationScore ≤ 20 and confidence accordingly.
 
 Return ONLY valid JSON — no prose, no markdown.`;
 }
@@ -245,7 +270,7 @@ ${text.substring(0, 8000)}
 Return ONLY a JSON object with this EXACT structure:
 {
   "manipulationScore": <integer 0-100, computed from tactic evidence>,
-  "trustScore": <integer 0-100>,
+  "trustScore": <integer 0-100, generally 100 - manipulationScore>,
   "confidence": <integer 50-98, based on evidence density>,
   "biasLevel": <integer 0-100>,
   "emotionalIntensity": <integer 0-100>,
@@ -259,7 +284,7 @@ Return ONLY a JSON object with this EXACT structure:
     {"name": "Bandwagon",  "value": <integer 0-100>, "color": "#3B82F6"}
   ],
   "suspiciousPhrases": [
-    {"phrase": "<exact phrase from text>", "risk": "high"|"medium", "category": "<rubric category>"}
+    {"phrase": "<exact phrase from text>", "risk": "high"|"medium"|"low", "category": "<rubric category>"}
   ],
   "radarData": [
     {"metric": "Emotional",   "value": <0-100>},
@@ -290,12 +315,11 @@ Return ONLY a JSON object with this EXACT structure:
 }
 
 RULES:
-• tacticEvidence must contain only detected tactics with real phrases from the text
+• tacticEvidence must contain detected tactics with real phrases from the text
 • manipulationScore must be consistent with the tacticEvidence scores
-• tactics[] values must sum to approximately 100
 • riskLevel: "high" if manipulationScore >= 61, "medium" if 41-60, "low" if <= 40
-• suspiciousPhrases: list 3-8 exact phrases from the text
-• If text is neutral with no manipulation, return manipulationScore ≤ 20 and empty tacticEvidence`;
+• suspiciousPhrases: cite 2-8 exact phrases from the text
+• If text is neutral with no manipulation, return manipulationScore ≤ 20 and empty or minimal tacticEvidence`;
 }
 
 function buildEmailSystemPrompt(): string {
@@ -343,48 +367,11 @@ CLASSIFICATION LABELS - COGNITIVE MANIPULATION TAXONOMY (choose exactly one):
   full credential harvesting (Aadhaar + PAN + password + OTP).
   Score: 83-100.
 
-LABEL DISAMBIGUATION RULES:
-- "financial_manipulation" requires explicit money extraction or transfer demand
-  (processing fee, advance fee, investment payment, bank transfer details).
-- "urgency_manipulation" is preferred for pressure-heavy offers (job/work-from-home,
-  promo deadlines, "today only") when no upfront payment request is present.
-- "authority_exploitation" requires impersonation of a recognized authority
-  (bank/government/CEO) as the primary compliance driver.
-
-SCORING RUBRIC - score each dimension 0-100, then compute weighted average:
-1. sender_legitimacy (20%): Is sender domain real? Lookalike domains score 70+. Free email for bank = 60+.
-2. urgency_pressure (18%): Artificial deadlines? "24 hours" = 70+. "1 hour" = 85+.
-3. threat_fear (20%): Threats of arrest/account closure/legal action? Arrest threat = 90+.
-4. credential_payment_request (22%): Asking OTP/password/card/bank details/advance fee? Full credentials = 85+.
-5. link_url_analysis (12%): Lookalike or suspicious URLs? Fake domain = 75+.
-6. social_engineering_tactics (8%): CEO fraud, govt impersonation, secrecy demand? Stacked tactics = 80+.
-
-INDIA-SPECIFIC PATTERN MAPPING:
-- identity_deception (90+): CBI/ED arrest + Aadhaar, UPI PIN request,
-  CEO wire transfer with secrecy demand, full KYC credential harvest
-- financial_manipulation (80+): Lottery prize + processing fee,
-  Shark Tank guaranteed returns, PM scholarship fee, IT refund + bank details
-- authority_exploitation (65+): RBI KYC circular, TRAI SIM block,
-  fake IT department, SBI/HDFC/ICICI account suspension
-- urgency_manipulation (50+): "24 hours ya account band",
-  delivery reschedule fee, subscription expires today
-- fear_induction (35+): Unusual activity alert, account verification,
-  failed payment notice, security upgrade required
-- mild_influence (20+): Flash sale, newsletter, subscription reminder
-- legitimate (5): OTP email, booking confirmation, appointment reminder
-
-LEGITIMATE INDICATORS (reduce score):
-- Official domain matching claimed brand (sbi.co.in, irctc.co.in, zomato.com)
-- Specific transaction details (PNR, order number, invoice number)
-- Unsubscribe link present
-- "Do NOT share OTP with anyone" warning
-- No link clicks required
-
 Return ONLY valid JSON:
 {
-  "email_label": "legitimate|mild_influence|fear_induction|urgency_manipulation|authority_exploitation|financial_manipulation|identity_deception",
+  "email_label": "legitimate" | "mild_influence" | "fear_induction" | "urgency_manipulation" | "authority_exploitation" | "financial_manipulation" | "identity_deception",
   "manipulation_score": <0-100>,
-  "risk_level": "low|medium|high|critical",
+  "risk_level": "low" | "medium" | "high" | "critical",
   "confidence": <0-100>,
   "dimension_scores": {
     "sender_legitimacy": <0-100>,
@@ -416,24 +403,24 @@ Return ONLY valid JSON with the exact schema in the system instructions.`;
 
 // ─── Compare prompt ───────────────────────────────────────────────────────────
 const CompareResponseSchema = z.object({
-  scoreA:       z.number().int().min(0).max(100),
-  scoreB:       z.number().int().min(0).max(100),
-  confidence:   z.number().int().min(60).max(98),
-  recommended:  z.enum(['A', 'B']),
-  explanation:  z.string().min(1),
+  scoreA:       clampedScore,
+  scoreB:       clampedScore,
+  confidence:   clampedScore,
+  recommended:  z.enum(['A', 'B']).catch('A'),
+  explanation:  z.string().default('Comparison completed.'),
   tacticsA: z.object({
-    emotional:  z.number().int().min(0).max(100),
-    urgency:    z.number().int().min(0).max(100),
-    authority:  z.number().int().min(0).max(100),
-    bandwagon:  z.number().int().min(0).max(100),
-    fear:       z.number().int().min(0).max(100),
+    emotional:  clampedScore,
+    urgency:    clampedScore,
+    authority:  clampedScore,
+    bandwagon:  clampedScore,
+    fear:       clampedScore,
   }),
   tacticsB: z.object({
-    emotional:  z.number().int().min(0).max(100),
-    urgency:    z.number().int().min(0).max(100),
-    authority:  z.number().int().min(0).max(100),
-    bandwagon:  z.number().int().min(0).max(100),
-    fear:       z.number().int().min(0).max(100),
+    emotional:  clampedScore,
+    urgency:    clampedScore,
+    authority:  clampedScore,
+    bandwagon:  clampedScore,
+    fear:       clampedScore,
   }),
 });
 
@@ -478,13 +465,21 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
       return await fn();
     } catch (err) {
       lastErr = err;
-      if (i < retries) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      if (i < retries) await new Promise(r => setTimeout(r, 800 * (i + 1)));
     }
   }
   throw lastErr;
 }
 
-// ─── Main analysis function ───────────────────────────────────────────────────
+// ─── Main analysis function with overloads ────────────────────────────────────
+export async function analyzeWithAI(
+  text: string,
+  mode: 'email',
+): Promise<OpenAIEmailAnalysisResult>;
+export async function analyzeWithAI(
+  text: string,
+  mode: 'news' | string,
+): Promise<OpenAIStandardAnalysisResult>;
 export async function analyzeWithAI(
   text: string,
   mode: string,

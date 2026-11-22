@@ -1,4 +1,12 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({
+  path: resolve(currentDir, '../.env'),
+});
 import express from 'express';
 import cors from 'cors';
 import { analyzeRouter } from './routes/analyze.js';

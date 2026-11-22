@@ -347,7 +347,9 @@ export async function runOpenAIEvaluation(
       try {
         const aiResult    = await analyzeWithAI(sample.text, sample.content_type);
         const localScore  = quickScore(sample.text, sample.content_type);
-        const openaiScore = 'manipulationScore' in aiResult ? aiResult.manipulationScore : aiResult.manipulation_score;
+        const openaiScore = 'manipulationScore' in (aiResult as any)
+          ? (aiResult as any).manipulationScore
+          : (aiResult as any).manipulation_score ?? 0;
         const openaiLabel = scoreToLabel(openaiScore) as ManipulationLabel;
         const localLabel  = scoreToLabel(localScore) as ManipulationLabel;
         sampleResults.push({

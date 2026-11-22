@@ -51,8 +51,10 @@ function extractHtmlText(markup: string): string {
 
 function isValidUrl(value: string): boolean {
   try {
-    const u = new URL(value);
-    return u.protocol === 'http:' || u.protocol === 'https:';
+    const trimmed = value.trim();
+    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const u = new URL(withProto);
+    return (u.protocol === 'http:' || u.protocol === 'https:') && u.hostname.includes('.');
   } catch {
     return false;
   }
@@ -117,17 +119,22 @@ export function AnalyzerPage() {
   };
 
   const handleUrlFetch = async () => {
-    const err = validateUrl(url);
+    let cleanUrl = url.trim();
+    if (cleanUrl && !cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = `https://${cleanUrl}`;
+      setUrl(cleanUrl);
+    }
+    const err = validateUrl(cleanUrl);
     if (err) { setUrlError(err); return; }
     setUrlError('');
     setIsFetchingUrl(true);
     setArticlePreview(null);
     try {
-      const preview = await fetchArticlePreview(url.trim());
+      const preview = await fetchArticlePreview(cleanUrl);
       setArticlePreview(preview);
-      toast.success('Article preview loaded');
+      toast.success('Article content extracted');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to fetch article preview.';
+      const msg = e instanceof Error ? e.message : 'Failed to fetch article content.';
       setUrlError(msg);
       toast.error(msg);
     } finally {
@@ -200,20 +207,40 @@ export function AnalyzerPage() {
   const handleAnalyze = async () => {
     setAnalyzeError('');
 
-    // Validate
-    if (inputMethod === 'text' || inputMethod === 'upload') {
+    let contentToAnalyze = text;
+    let finalUrl = url.trim();
+
+    if (inputMethod === 'url') {
+      if (finalUrl && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+        finalUrl = `https://${finalUrl}`;
+        setUrl(finalUrl);
+      }
+      const err = validateUrl(finalUrl);
+      if (err) { setUrlError(err); return; }
+
+      // If user hasn't fetched article preview yet, automatically extract content first
+      if (!articlePreview || !articlePreview.bodyText) {
+        setIsFetchingUrl(true);
+        try {
+          const preview = await fetchArticlePreview(finalUrl);
+          setArticlePreview(preview);
+          contentToAnalyze = preview.bodyText || preview.headline;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Could not extract content from this URL.';
+          setUrlError(msg);
+          setAnalyzeError(msg);
+          setIsFetchingUrl(false);
+          return;
+        } finally {
+          setIsFetchingUrl(false);
+        }
+      } else {
+        contentToAnalyze = articlePreview.bodyText || articlePreview.headline;
+      }
+    } else {
       const err = validateText(text);
       if (err) { setTextError(err); return; }
     }
-    if (inputMethod === 'url') {
-      const err = validateUrl(url);
-      if (err) { setUrlError(err); return; }
-    }
-
-    // For URL mode: prefer real extracted body text from Firecrawl over just the headline
-    const contentToAnalyze = inputMethod === 'url'
-      ? (articlePreview?.bodyText || articlePreview?.headline || url)
-      : text;
 
     setIsAnalyzing(true);
 
@@ -222,7 +249,7 @@ export function AnalyzerPage() {
         contentToAnalyze,
         mode,
         inputMethod,
-        inputMethod === 'url' ? url : undefined,
+        inputMethod === 'url' ? finalUrl : undefined,
       );
       setCurrentResult(result);
       addToHistory(result);
